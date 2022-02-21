@@ -1,0 +1,13 @@
+server:
+  port: 8802
+
+logging:
+  level:
+    com.irostub.orderservice: debug
+
+spring:
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/github/whatap-test/h2/orderservice
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver

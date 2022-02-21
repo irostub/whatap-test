@@ -1,0 +1,24 @@
+server:
+  port: 8801
+
+
+logging:
+  level:
+    com.irostub.productservice: debug
+    org:
+      springframework:
+        jdbc:
+          core:
+            JdbcTemplate: debug
+
+spring:
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/github/whatap-test/h2/productservice
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100
