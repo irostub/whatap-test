@@ -1,6 +1,7 @@
-package com.irostub.orderservice;
+package com.irostub.orderservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.irostub.orderservice.domain.Order;
 import lombok.Data;
 
 @Data

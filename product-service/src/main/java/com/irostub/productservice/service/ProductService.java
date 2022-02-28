@@ -1,5 +1,10 @@
-package com.irostub.productservice;
+package com.irostub.productservice.service;
 
+import com.irostub.productservice.domain.Product;
+import com.irostub.productservice.dto.ProductRequest;
+import com.irostub.productservice.dto.ProductResponse;
+import com.irostub.productservice.exception.ProductNotFoundException;
+import com.irostub.productservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -1,11 +1,11 @@
 package com.irostub.productservice;
 
+import com.irostub.productservice.domain.Product;
+import com.irostub.productservice.repository.ProductRepositoryJdbcImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 
 @SpringBootTest

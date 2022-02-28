@@ -13,11 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.irostub.productservice;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.hateoas.config.EnableHypermediaSupport;
-import org.springframework.hateoas.config.EnableHypermediaSupport.HypermediaType;
+package com.irostub.productservice.config;
 
 //@Configuration
 //@EnableHypermediaSupport(type = HypermediaType.HAL_FORMS)

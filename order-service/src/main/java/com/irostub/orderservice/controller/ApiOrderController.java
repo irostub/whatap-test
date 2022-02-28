@@ -1,13 +1,14 @@
-package com.irostub.orderservice;
+package com.irostub.orderservice.controller;
 
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.irostub.orderservice.dto.OrderRequest;
+import com.irostub.orderservice.dto.OrderResponse;
+import com.irostub.orderservice.service.OrderService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -25,39 +26,6 @@ import java.util.stream.Collectors;
 public class ApiOrderController {
     private final String endpoint = "http://localhost:8802/orders";
     private final OrderService orderService;
-
-    @ExceptionHandler
-    public ResponseEntity<ErrorResult> handleMethodArgumentNotValidException(InvalidFormatException e){
-        String pathReference = e.getPathReference();
-        String path = pathReference.substring(pathReference.indexOf('[')+2,pathReference.indexOf(']')-1);
-
-        ErrorResult errorResult = new ErrorResult
-                (path, e.getValue() + "는 " + e.getTargetType() + "가 될 수 없습니다.");
-        return ResponseEntity
-                .badRequest()
-                .body(errorResult);
-    }
-
-    @ExceptionHandler
-    public ResponseEntity<String> handleOrderNotFoundException(OrderNotFoundException e){
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(e.getMessage());
-    }
-
-    @ExceptionHandler
-    public ResponseEntity<String> handleProductNotFoundException(ProductNotFoundException e){
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(e.getMessage());
-    }
-
-    @ExceptionHandler
-    public ResponseEntity<String> handleProductQuantityNotEnoughException(ProductQuantityNotEnoughException e){
-        return ResponseEntity
-                .badRequest()
-                .body(e.getMessage());
-    }
 
     @GetMapping
     public ResponseEntity<Response<List<OrderResponse>>> getAllOrders() {

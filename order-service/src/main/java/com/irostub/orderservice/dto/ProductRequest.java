@@ -1,4 +1,4 @@
-package com.irostub.orderservice;
+package com.irostub.orderservice.dto;
 
 
 import lombok.Getter;

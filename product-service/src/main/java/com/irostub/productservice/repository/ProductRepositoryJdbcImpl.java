@@ -1,5 +1,6 @@
-package com.irostub.productservice;
+package com.irostub.productservice.repository;
 
+import com.irostub.productservice.domain.Product;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;

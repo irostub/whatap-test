@@ -1,5 +1,6 @@
-package com.irostub.orderservice;
+package com.irostub.orderservice.repository;
 
+import com.irostub.orderservice.domain.Order;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,7 @@ public class OrderRepositoryJdbcImpl implements OrderRepository {
     private final JdbcTemplate jdbcTemplate;
 
     @Override
-    public long insert(Order order) {
+    public Long insert(Order order) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(con -> {

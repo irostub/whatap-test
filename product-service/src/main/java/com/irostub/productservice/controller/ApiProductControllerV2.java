@@ -1,14 +1,16 @@
-package com.irostub.productservice;
+package com.irostub.productservice.controller;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.irostub.productservice.dto.ErrorResult;
+import com.irostub.productservice.dto.ProductRequest;
+import com.irostub.productservice.dto.ProductResponse;
+import com.irostub.productservice.service.ProductService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -27,25 +29,6 @@ import java.util.stream.Collectors;
 public class ApiProductControllerV2 {
     private final ProductService productService;
     private final String endpoint = "http://localhost:8801/v2/products";
-
-    @ExceptionHandler
-    public ResponseEntity<ErrorResult> handleMethodArgumentNotValidException(InvalidFormatException e){
-        String pathReference = e.getPathReference();
-        String path = pathReference.substring(pathReference.indexOf('[')+2,pathReference.indexOf(']')-1);
-
-        ErrorResult errorResult = new ErrorResult
-                (path, e.getValue() + "는 " + e.getTargetType() + "가 될 수 없습니다.");
-        return ResponseEntity
-                .badRequest()
-                .body(errorResult);
-    }
-
-    @ExceptionHandler
-    public ResponseEntity<String> handleProductNotFoundException(ProductNotFoundException e) {
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(e.getMessage());
-    }
 
     @GetMapping
     public ResponseEntity<Response<List<ProductResponse>>> getProducts() {
@@ -127,12 +110,5 @@ public class ApiProductControllerV2 {
         private String rel;
         private String method;
         private String link;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    static class ErrorResult{
-        private String arguments;
-        private String reason;
     }
 }

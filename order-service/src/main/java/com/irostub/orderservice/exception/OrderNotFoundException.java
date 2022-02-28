@@ -1,4 +1,4 @@
-package com.irostub.orderservice;
+package com.irostub.orderservice.exception;
 
 public class OrderNotFoundException extends RuntimeException{
     public OrderNotFoundException(String message) {

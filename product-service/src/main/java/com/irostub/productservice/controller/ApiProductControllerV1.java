@@ -1,5 +1,9 @@
-package com.irostub.productservice;
+package com.irostub.productservice.controller;
 
+import com.irostub.productservice.dto.ProductRequest;
+import com.irostub.productservice.dto.ProductResponse;
+import com.irostub.productservice.exception.ProductNotFoundException;
+import com.irostub.productservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

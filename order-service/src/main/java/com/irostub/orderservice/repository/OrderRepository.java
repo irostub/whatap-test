@@ -1,5 +1,6 @@
-package com.irostub.orderservice;
+package com.irostub.orderservice.repository;
 
+import com.irostub.orderservice.domain.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -7,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OrderRepository{
-    long insert(Order order);
+    Long insert(Order order);
 
     Optional<Order> findById(Long id);
 

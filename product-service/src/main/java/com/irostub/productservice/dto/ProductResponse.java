@@ -1,5 +1,6 @@
-package com.irostub.productservice;
+package com.irostub.productservice.dto;
 
+import com.irostub.productservice.domain.Product;
 import lombok.Data;
 
 @Data

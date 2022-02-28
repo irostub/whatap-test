@@ -1,4 +1,4 @@
-package com.irostub.productservice;
+package com.irostub.productservice.dto;
 
 import lombok.Data;
 
