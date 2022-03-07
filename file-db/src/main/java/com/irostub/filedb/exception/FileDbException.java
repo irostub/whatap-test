@@ -1,4 +1,4 @@
-package com.irostub.filedb;
+package com.irostub.filedb.exception;
 
 public class FileDbException extends RuntimeException{
     public FileDbException() {

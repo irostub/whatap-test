@@ -10,9 +10,9 @@ public class RecordHeader {
     private int dataSize;
 
     //8byte
-    private long nextDeleteKey = -1;
+    private long nextDeleteKey = -99;
 
-    private long selfIndex;
+    private long selfPosition;
 
     public RecordHeader(long dataIndex, int dataSize, long nextDeleteKey) {
         this.dataIndex = dataIndex;
@@ -29,12 +29,12 @@ public class RecordHeader {
         this.nextDeleteKey = index;
     }
 
-    public void setSelfIndex(long selfIndex) {
-        this.selfIndex = selfIndex;
+    public void setSelfPosition(long selfPosition) {
+        this.selfPosition = selfPosition;
     }
 
-    public long getSelfIndex() {
-        return selfIndex;
+    public long getSelfPosition() {
+        return selfPosition;
     }
 
     public void setDataIndex(long dataIndex) {

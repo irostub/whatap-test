@@ -95,8 +95,8 @@ public class OrderRepositoryJdbcImpl implements OrderRepository {
     }
 
     @Override
-    public int deleteById(Long id) {
-        return jdbcTemplate
+    public void deleteById(Long id) {
+        jdbcTemplate
                 .update("DELETE FROM ORDERS WHERE id = ?", id);
     }
 

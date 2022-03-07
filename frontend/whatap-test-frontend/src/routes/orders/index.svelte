@@ -84,7 +84,7 @@
             <th class="px-6 py-2 text-xs text-gray-500">주문명</th>
             <th class="px-6 py-2 text-xs text-gray-500">주문설명</th>
             <th class="px-6 py-2 text-xs text-gray-500">주문상태</th>
-            <th class="px-6 py-2 text-xs text-gray-500">상품명</th>
+            <th class="px-6 py-2 text-xs text-gray-500">주문수량</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-300">
@@ -92,13 +92,13 @@
           <tr id={order.id}
           on:click|stopPropagation={onRowClick}
           class="whitespace-nowrap cursor-pointer hover:bg-gray-200">
-            <td>{(size*currentPage)+i+1}</td>
+          <td>{(size*currentPage)+i+1}</td>
+            <td>{order.id}</td>
             <td>{order.productId}</td>
-            <td>{order.quantity}</td>
             <td>{order.name}</td>
             <td>{order.description}</td>
-            <td>{order.status}</td>
             <td>{order.productName}</td>
+            <td>{order.quantity}</td>
           </tr>
           {/each}
         </tbody>

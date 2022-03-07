@@ -45,4 +45,7 @@ public class Order {
         this.status = status;
         this.productName = productName;
     }
+
+    protected Order() {
+    }
 }

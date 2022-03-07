@@ -26,7 +26,7 @@ public class ProductRepositoryJdbcImpl implements ProductRepository {
     public Long insert(Product product) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
 
-        jdbcTemplate.update(con->{
+        jdbcTemplate.update(con -> {
             PreparedStatement ps = con
                     .prepareStatement("INSERT INTO PRODUCT (name, price, quantity) VALUES (?, ?, ?)",
                             Statement.RETURN_GENERATED_KEYS);
@@ -41,10 +41,10 @@ public class ProductRepositoryJdbcImpl implements ProductRepository {
 
     @Override
     public Optional<Product> findById(Long id) {
-        try{
-         return Optional.ofNullable(jdbcTemplate
-                 .queryForObject("SELECT * FROM PRODUCT WHERE id = ?", productRowMapper, id));
-        }catch (EmptyResultDataAccessException e){
+        try {
+            return Optional.ofNullable(jdbcTemplate
+                    .queryForObject("SELECT * FROM PRODUCT WHERE id = ?", productRowMapper, id));
+        } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
     }
@@ -59,7 +59,7 @@ public class ProductRepositoryJdbcImpl implements ProductRepository {
 
         List<Product> result = jdbcTemplate.query(query, productRowMapper);
 
-        return new PageImpl<>(result , pageable, count);
+        return new PageImpl<>(result, pageable, count);
     }
 
     @Override
@@ -73,7 +73,7 @@ public class ProductRepositoryJdbcImpl implements ProductRepository {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(
-                con->{
+                con -> {
                     PreparedStatement ps = con.prepareStatement("UPDATE PRODUCT SET name = ?, price = ?, quantity = ? WHERE id = ?",
                             Statement.RETURN_GENERATED_KEYS);
                     ps.setString(1, product.getName());
@@ -81,20 +81,20 @@ public class ProductRepositoryJdbcImpl implements ProductRepository {
                     ps.setInt(3, product.getQuantity());
                     ps.setLong(4, id);
                     return ps;
-                },keyHolder);
+                }, keyHolder);
         return keyHolder.getKey().longValue();
     }
 
     @Override
-    public int deleteById(Long id) {
-        return jdbcTemplate
+    public void deleteById(Long id) {
+        jdbcTemplate
                 .update("DELETE FROM PRODUCT WHERE id = ?", id);
     }
 
     private final RowMapper<Product> productRowMapper = (rs, rowNum) ->
             new Product(
-            rs.getLong("id"),
-            rs.getString("name"),
-            rs.getInt("price"),
-            rs.getInt("quantity"));
+                    rs.getLong("id"),
+                    rs.getString("name"),
+                    rs.getInt("price"),
+                    rs.getInt("quantity"));
 }

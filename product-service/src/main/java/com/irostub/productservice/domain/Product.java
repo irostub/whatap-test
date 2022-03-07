@@ -32,7 +32,7 @@ public class Product {
         this.quantity = quantity;
     }
 
-    public Product() {
+    private Product() {
 
     }
 

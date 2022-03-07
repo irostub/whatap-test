@@ -6,11 +6,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,47 +23,33 @@ public class ProductRepositoryFileImpl implements ProductRepository{
 
     @Override
     public Long insert(Product product) {
-        try {
-            return productFileDb.insertRecord(product);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return productFileDb.insertRecord(product);
     }
 
     @Override
     public Optional<Product> findById(Long id) {
-        try {
             return Optional.ofNullable(productFileDb.findRecord(id));
-        }catch(IOException | InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e){
-            e.printStackTrace();
-            return Optional.empty();
-        }
     }
 
     @Override
     public List<Product> findAll() {
-        return null;
+        return productFileDb.findAllRecords();
     }
 
     @Override
     public Page<Product> findAll(Pageable pageable) {
-        return null;
+        long count = productFileDb.count();
+        List<Product> allRecords = productFileDb.findAllRecords(pageable.getOffset(), pageable.getPageSize());
+        return new PageImpl<>(allRecords, pageable, count);
     }
 
     @Override
     public long updateById(Long id, Product product) {
-        return 0;
+        return productFileDb.updateRecord(id, product);
     }
 
     @Override
-    public int deleteById(Long id) {
-        try {
+    public void deleteById(Long id) {
             productFileDb.deleteRecord(id);
-            return 1;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return 0;
-        }
     }
 }

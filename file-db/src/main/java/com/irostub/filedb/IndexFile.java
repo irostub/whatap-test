@@ -1,14 +1,22 @@
 package com.irostub.filedb;
 
+import com.irostub.filedb.exception.IndexFileException;
+import com.irostub.filedb.exception.IndexFileInitializeException;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+@Slf4j
 public class IndexFile {
     private RandomAccessFile file;
-    private Map<Long, RecordHeader> index;
+    private Map<Long, RecordHeader> indexEntry;
+
 
     private static final String INDEX_FILE_NAME_PREFIX = "index_";
 
@@ -31,48 +39,127 @@ public class IndexFile {
     //(FILE_HEADER_SIZE + INDEX_NODE_LENGTH * x) 는 다음 인덱스 시작 주소를 나타냄
     private static final byte INDEX_NODE_LENGTH = INDEX_KEY_LENGTH + RECORD_HEADER_LENGTH;
 
-    public long generateKey() throws IOException {
-        long key = readKeySeq();
-        writeKeySeq(readKeySeq() + 1);
+    public static IndexFile initIndexFile(String databasePath, Mode mode, long recordCount) {
+        File f = new File(INDEX_FILE_NAME_PREFIX + databasePath);
+        if (f.exists()) {
+            return new IndexFile(f, mode, recordCount);
+        } else {
+            return new IndexFile(f);
+        }
+    }
+
+    private IndexFile(File f){
+        initializeIndexDatabase(f, Mode.WRITE);
+        writeLastDeletedKey(-99L);
+        writeSequence(0);
+        initMemoryIndexMap(0);
+    }
+
+    private IndexFile(File f, Mode mode, long recordCount){
+        initializeIndexDatabase(f, mode);
+        initMemoryIndexMap(recordCount);
+    }
+
+    private void initializeIndexDatabase(File f, Mode mode){
+        try{
+            this.file = new RandomAccessFile(f, mode.getProperty());
+        }catch (FileNotFoundException e) {
+            log.error("인덱스 데이터베이스 파일을 찾을 수 없습니다.");
+            throw new IndexFileInitializeException(e);
+        }
+        log.info("index database is ready");
+    }
+
+    private void initMemoryIndexMap(long recordCount){
+        indexEntry = new ConcurrentHashMap<>();
+        for(long i = 0; i < recordCount; i++){
+            long key = readKey(getKeyFp(i));
+            RecordHeader recordHeader = readRecordHeader(getRecordHeaderFp(i));
+            recordHeader.setSelfPosition(i);
+
+            this.indexEntry.put(key, recordHeader);
+        }
+    }
+
+    public long getEofFp(){
+        try {
+            return file.length();
+        }catch(IOException e) {
+            log.error("cannot read file length");
+            throw new IndexFileException(e);
+        }
+    }
+
+    public void updateInMemoryIndex(long key, RecordHeader recordHeader){
+        indexEntry.replace(key, recordHeader);
+    }
+
+    //TODO : 해당 메서드를 삭제하고 writeRecordHeader() 로 통합
+    public void writeHeaderFromIndex(long position, RecordHeader recordHeader){
+        long filePointer = getRecordHeaderFp(position);
+        writeRecordHeader(filePointer, recordHeader);
+    }
+
+    public long generateKey(){
+        long key = readSequence();
+        writeSequence(readSequence() + 1);
         return key;
     }
 
-    public void addIndex(long indexPosition, long key, RecordHeader recordHeader) throws IOException {
+    public void addIndexNode(long index, long key, RecordHeader recordHeader){
 
-        file.seek(indexPosition);
-        file.writeLong(key);
+        long recordHeaderIndex = writeKey(index, key);
+        writeRecordHeader(recordHeaderIndex, recordHeader);
 
-        writeHeader(recordHeader);
-
-        index.put(key, recordHeader);
+        indexEntry.put(key, recordHeader);
     }
 
-    public void deleteEntryIndex(long targetKey) throws IOException {
-        RecordHeader targetRecord = index.get(targetKey);
-        long lastDeleteRecordKey = readLastDeleteRecordKey();
+    /*
+    인덱스가 실제로 지워지는 때
+    1. 기존에 삭제된 인덱스 노드가 있다.
+    2. 새로 추가하고자 하는 인덱스 노드가 들어온다.
+    3. 기존 삭제된 인덱스 노드 중 worst case 를 찾고
+    3. 새로 추가하고자 하는 인덱스 노드의 레코드 데이터 사이즈와 기존에 삭제된 인덱스 노드의 레코드 데이터 사이즈가 같다면
+    4. 삭제 처리되었던 인덱스 노드를 실제로 파일에서 삭제하고 새로 삽입하고자 하는 인덱스 노드로 교체한다.
+    4과정에서
+     */
+    public void deleteIndexNode(long key){
+        //삭제하려는 인덱스 노드
+        RecordHeader targetRecord = indexEntry.get(key);
+
+        //기존에 삭제했던 인덱스 노드의 링크드리스트 시작 키
+        long lastDeleteRecordKey = readLastDeletedKey();
+
+        //링크드리스트 삭제 과정 시작
+
         //삭제하려는 인덱스가 처음 인덱스인 경우
-        if(targetKey == lastDeleteRecordKey){
-            writeLastDeleteRecordKey(targetRecord.getNextDeleteKey());
+        if(key == lastDeleteRecordKey){
+            writeLastDeletedKey(targetRecord.getNextDeleteKey());
             return;
         }
 
+        //삭제되었던 노드 링크드리스트를 삭제하고자하는 노드의 이전 노드를 찾을 때까지 순회
         RecordHeader prevRecord = getRecordHeaderFromKey(lastDeleteRecordKey);
-        while(prevRecord.getNextDeleteKey() != targetKey){
+        while(prevRecord.getNextDeleteKey() != key){
             prevRecord = getRecordHeaderFromKey(prevRecord.getNextDeleteKey());
         }
-        //삭제하려는 인덱스가 처음이 아닌 경우
-        prevRecord.setNextDeleteKey(targetRecord.getNextDeleteKey());
-        writeHeaderFromIndex(prevRecord.getSelfIndex(),prevRecord);
 
-        //인메모리 동기화
-        long prevKey = readKeyFromPosition(prevRecord.getSelfIndex());
-        index.replace(prevKey, prevRecord);
-        index.remove(targetKey);
+        //삭제하려는 인덱스가 처음이 아닌 경우
+        //삭제하고자 하는 노드의 이전 노드가 삭제하려는 노드의 다음 노드 포인터를 가르키도록 설정
+        prevRecord.setNextDeleteKey(targetRecord.getNextDeleteKey());
+
+        //이전 노드에 대해 변경된 헤더를 실제로 파일에 쓰기
+        long recordHeaderFp = getRecordHeaderFp(prevRecord.getSelfPosition());
+        writeRecordHeader(recordHeaderFp, prevRecord);
+
+        //인메모리맵을 동기화
+        long prevKey = readKey(prevRecord.getSelfPosition());
+        indexEntry.replace(prevKey, prevRecord);
+        indexEntry.remove(key);
     }
 
-    //삭제된 레코드에 대해서 메모리 접근
-    public long getWorstFitKey() throws IOException {
-        long lastDeleteKey = readLastDeleteRecordKey();
+    public long searchWorstFitKey(){
+        long lastDeleteKey = readLastDeletedKey();
         RecordHeader lastDeleteHeader = getRecordHeaderFromKey(lastDeleteKey);
 
         int dataSize = lastDeleteHeader.getDataSize();
@@ -90,113 +177,120 @@ public class IndexFile {
         return maxSizeRecordKey;
     }
 
-    public RecordHeader getRecordHeaderFromKey(long key){
-        return index.get(key);
+    public List<RecordHeader> getRecordHeaders(){
+        return new ArrayList<>(indexEntry.values());
     }
 
-    public boolean hasDeleteIndex() throws IOException {
-        return readLastDeleteRecordKey() != -1L;
+    public RecordHeader getRecordHeaderFromKey(Long key){
+        return indexEntry.get(key);
     }
 
-    public long getIndexPosition(long position){
+    public List<RecordHeader> getRecordHeadersFromKeys(Long ... keys){
+        return Arrays.stream(keys)
+                .sorted(Comparator.naturalOrder())
+                .map(this::getRecordHeaderFromKey)
+                .collect(Collectors.toList());
+    }
+
+    public long getRecordHeaderFp(long position){
+        return getKeyFp(position) + INDEX_KEY_LENGTH;
+    }
+
+    public long getKeyFp(long position){
         return INDEX_FILE_HEADER_SIZE + (INDEX_NODE_LENGTH * position);
     }
 
-    public long getHeaderFromIndex(long index){
-        return getIndexPosition(index) + INDEX_KEY_LENGTH;
+    public long readKey(long index){
+        try {
+            file.seek(index);
+            return file.readLong();
+        }catch (IOException e){
+            log.error("cannot read key");
+            throw new IndexFileException(e);
+        }
     }
 
-    public long readKeyFromPosition(long position) throws IOException {
-        file.seek(getIndexPosition(position));
-        return file.readLong();
-    }
-
-    public static IndexFile initIndexFile(String databasePath, Mode mode, long recordCount){
-        File f = new File(INDEX_FILE_NAME_PREFIX + databasePath);
-
+    public long writeKey(long index, long key){
         try{
-            if(f.exists()){
-                return new IndexFile(f, mode, recordCount);
-            }else{
-                return new IndexFile(f);
-            }
+            file.seek(index);
+            file.writeLong(key);
+            return file.getFilePointer();
         }catch(IOException e){
-            e.printStackTrace();
-            return null;
+            log.error("cannot write key");
+            throw new IndexFileException(e);
         }
     }
 
-    public long readLastDeleteRecordKey() throws IOException {
-        file.seek(LAST_DELETE_RECORD_INDEX);
-        return file.readLong();
+    public boolean hasLastDeletedKey(){
+        return readLastDeletedKey() != -99L;
     }
 
-    public void writeHeaderFromIndex(long index, RecordHeader recordHeader) throws IOException {
-        file.seek(getHeaderFromIndex(index));
-        writeHeader(recordHeader);
+    public long readLastDeletedKey(){
+        try {
+            file.seek(LAST_DELETE_RECORD_INDEX);
+            return file.readLong();
+        } catch (IOException e) {
+            log.error("cannot read last deleted key");
+            throw new IndexFileException(e);
+        }
     }
+
+    public void writeLastDeletedKey(long index){
+        try {
+            file.seek(LAST_DELETE_RECORD_INDEX);
+            file.writeLong(index);
+        }catch (IOException e){
+            log.error("cannot write last deleted key");
+            throw new IndexFileException(e);
+        }
+    }
+
     public void removeIndexInMemoryMap(long key){
-        index.remove(key);
+        indexEntry.remove(key);
     }
 
-    public void updateInMemoryIndex(long key, RecordHeader recordHeader){
-        index.replace(key, recordHeader);
-    }
-
-    private RecordHeader readRecordHeaderFromPosition(long position) throws IOException {
-        file.seek(getIndexPosition(position)+INDEX_KEY_LENGTH);
-
-        long dataIndex = file.readLong();
-        int dataSize = file.readInt();
-        long nextDeleteIndex = file.readLong();
-
-        return new RecordHeader(dataIndex, dataSize, nextDeleteIndex);
-    }
-
-    //첫 로드
-
-    private IndexFile(File f) throws IOException {
-        file = new RandomAccessFile(f, Mode.WRITE.getProperty());
-        writeLastDeleteRecordKey(-1L);
-        writeKeySeq(0);
-        initMemoryIndexMap(0);
-    }
-
-    //이후 로드
-
-    private IndexFile(File f, Mode mode, long recordCount) throws IOException {
-        file = new RandomAccessFile(f, mode.getProperty());
-        initMemoryIndexMap(recordCount);
-    }
-
-    private void initMemoryIndexMap(long recordCount) throws IOException {
-        index = new ConcurrentHashMap<>();
-        for(long i = 0; i < recordCount; i++){
-            long key = readKeyFromPosition(i);
-            RecordHeader recordHeader = readRecordHeaderFromPosition(i);
-            recordHeader.setSelfIndex(i);
-            index.put(key, recordHeader);
+    private RecordHeader readRecordHeader(long index){
+        try {
+            file.seek(index);
+            long dataIndex = file.readLong();
+            int dataSize = file.readInt();
+            long nextDeleteIndex = file.readLong();
+            return new RecordHeader(dataIndex, dataSize, nextDeleteIndex);
+        }catch(IOException e){
+            log.error("cannot read record header");
+            throw new IndexFileException(e);
         }
     }
 
-    private void writeHeader(RecordHeader recordHeader) throws IOException {
-        file.writeLong(recordHeader.getDataIndex());
-        file.writeInt(recordHeader.getDataSize());
-        file.writeLong(recordHeader.getNextDeleteKey());
+    public void writeRecordHeader(long index, RecordHeader recordHeader){
+        try {
+            file.seek(index);
+            file.writeLong(recordHeader.getDataIndex());
+            file.writeInt(recordHeader.getDataSize());
+            file.writeLong(recordHeader.getNextDeleteKey());
+        } catch (IOException e) {
+            log.error("cannot write record header");
+            throw new IndexFileException(e);
+        }
     }
 
-    public void writeLastDeleteRecordKey(long index) throws IOException {
-        file.seek(LAST_DELETE_RECORD_INDEX);
-        file.writeLong(index);
+    private long readSequence(){
+        try {
+            file.seek(KEY_SEQUENCE_INDEX);
+            return file.readLong();
+        }catch(IOException e){
+            log.error("cannot read sequence");
+            throw new IndexFileException(e);
+        }
     }
 
-    private long readKeySeq() throws IOException {
-        file.seek(KEY_SEQUENCE_INDEX);
-        return file.readLong();
-    }
-
-    private void writeKeySeq(long num) throws IOException {
-        file.seek(KEY_SEQUENCE_INDEX);
-        file.writeLong(num);
+    private void writeSequence(long num){
+        try {
+            file.seek(KEY_SEQUENCE_INDEX);
+            file.writeLong(num);
+        }catch (IOException e){
+            log.error("cannot write sequence");
+            throw new IndexFileException(e);
+        }
     }
 }

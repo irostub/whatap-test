@@ -18,5 +18,5 @@ public interface OrderRepository{
 
     long updateById(Long id, Order order);
 
-    int deleteById(Long id);
+    void deleteById(Long id);
 }
