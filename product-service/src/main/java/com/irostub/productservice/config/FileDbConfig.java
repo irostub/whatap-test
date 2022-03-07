@@ -11,7 +11,7 @@ import java.io.IOException;
 @Configuration
 public class FileDbConfig {
     @Bean
-    public FileDb<Product> fileDb() throws IOException {
+    public FileDb<Product> fileDb(){
         return new FileDb<>("productDb", Mode.WRITE, Product.class);
     }
 }

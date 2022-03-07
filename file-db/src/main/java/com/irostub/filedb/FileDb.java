@@ -196,11 +196,6 @@ public class FileDb<T> {
         int realSize = targetData.length() + 2;
 
         if (originRecordHeader.getDataSize() > realSize) {
-            //인덱스의 경우는 기존 헤더를 갈이치우는 것으로 해결 가능
-            //삭제된 공간을 가르키는 인덱스는 어떻게 존재해야하는가?
-            //삭제된 공간을 가르키는 인덱스를 새로 만들어서 추가(이는 키를 새로 발급하는 것과도 같다) 이부분은 문제임.
-            //만약 이걸 회피하고 싶다면,
-
             int gap = originRecordHeader.getDataSize() - realSize;
 
             //분할 공간 인덱스 추가 & 키 갱신
